@@ -3,15 +3,23 @@ import random
 import sys, os
 
 class Tetrisapp:
+    pygame.init()
+
     sqSize = 30
-    pieceColor =   [[0  , 0  , 0  ],
-                    [0  , 255, 255],
-                    [255, 255, 0  ],
-                    [255, 0  , 255],
-                    [255, 0  , 0  ],
-                    [0  , 255, 0  ],
-                    [255, 127, 0  ],
-                    [0  , 0  , 255]]
+    dead = False
+
+    path = os.path.dirname(sys.argv[0])
+    font = pygame.font.Font(path + '/fonts/Roboto-Bold.ttf', 64)
+    youDied = font.render('YOU DIED!', True, (255, 255, 255))
+
+    pieceColor =   ((0  , 0  , 0  ),
+                    (0  , 255, 255),
+                    (255, 255, 0  ),
+                    (255, 0  , 255),
+                    (255, 0  , 0  ),
+                    (0  , 255, 0  ),
+                    (255, 127, 0  ),
+                    (0  , 0  , 255))
 
     pieceShapeDef = [[[0]],
 
@@ -35,25 +43,21 @@ class Tetrisapp:
             [[7, 7, 7],
              [0, 0, 7]]]
 
-    
-
     def __init__(self):
-        self.timeSinceLastUpdate = 0
-        self.newPiece()
-
         self.grid = [None] * 10
         for i in range(len(self.grid)):
             self.grid[i] = [0] * 20
 
-        path = os.path.dirname(sys.argv[0])
+        self.lastUpdateTime = 0
+        self.newPiece()
         
-        pygame.mixer.music.load(path + '/tetris-99-main-theme.mp3')
-        pygame.mixer.music.set_volume(0.5)
-        pygame.mixer.music.play(-1)
-        
+    def drop(self):
+        self.lastUpdateTime = 0
+        self.update()
+
     def update(self):
-        if pygame.time.get_ticks() > self.timeSinceLastUpdate + 500:
-            self.timeSinceLastUpdate = pygame.time.get_ticks()
+        if pygame.time.get_ticks() > self.lastUpdateTime + 500:
+            self.lastUpdateTime = pygame.time.get_ticks()
             self.thisPieceY += 1
             if self.colliding():
                 self.thisPieceY -= 1
@@ -91,6 +95,9 @@ class Tetrisapp:
         self.thisPieceX = 4
         self.thisPieceY = 0
 
+        if self.colliding():
+            self.dead = True
+
     def rotatePiece(self):
         # newPieceShape = []
         # for x in range(len(self.thisPieceShape)):
@@ -101,6 +108,13 @@ class Tetrisapp:
         if self.thisPieceX + len(self.thisPieceShape) > 10:
                     self.thisPieceX = 10 - len(self.thisPieceShape)
         
+        if self.colliding():
+            self.rotatePiece()
+    
+    def move(self, deltaX):
+        self.thisPieceX += deltaX
+        if self.thisPieceX < 0 or self.thisPieceX + len(self.thisPieceShape) > 10 or self.colliding():
+            self.thisPieceX -= deltaX
 
     def show(self, DISPLAY, offsetX, offsetY):
         # print("grid = ") # Grid in the console
@@ -120,3 +134,6 @@ class Tetrisapp:
                 if (self.thisPieceShape[x][y] != 0):
                     rectInfo = pygame.Rect(self.sqSize * (self.thisPieceX + x) + offsetX, self.sqSize * (self.thisPieceY + y) + offsetY, self.sqSize, self.sqSize)
                     pygame.draw.rect(DISPLAY, self.thisPieceColor, rectInfo)
+
+        if self.dead:     
+            DISPLAY.blit(self.youDied, (offsetX, offsetY + 250))
